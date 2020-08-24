@@ -1,0 +1,22 @@
+{
+    "bridge": {
+      "name": "Homebridge",
+      "username": "CC:22:3D:E3:CE:30",
+      "model": "homebridge",
+      "port": 51826,
+      "pin": "031-45-154"
+    },
+    "description": "This is an example configuration file for homebridge-honeywell-tuxedo-touch",
+    "platforms": [],
+    "accessories": [
+      {
+        "name": "Home Security",
+        "accessory": "Honeywell Tuxedo Touch",
+        "host": "myalarm.ddns.net",
+        "alarmCode": "1234",
+        "polling": true,
+        "pollInterval": 10000,
+        "debug": false
+      }
+    ]
+}

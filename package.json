@@ -1,0 +1,31 @@
+{
+  "name": "homebridge-honeywell-tuxedo-touch",
+  "version": "1.0.0",
+  "description": "Homebridge plugin for the honeywell tuxedo touch",
+  "main": "index.js",
+  "scripts": {
+    "nodemon": "homebridge -I -D",
+    "watch": "npm-watch"
+  },
+  "keywords": [
+    "homebridge-plugin",
+    "Honeywell",
+    "Tuxedo",
+    "Tuxedo Touch"
+  ],
+  "author": "Ashish Shekhar",
+  "license": "GPL-3.0-or-later",
+  "engines": {
+    "node": ">=10.17.0",
+    "homebridge": ">=0.4.8"
+  },
+  "dependencies": {
+    "crypto-js": "^4.0.0",
+    "node-html-parser": "^1.2.20",
+    "polling-to-event": "^2.1.0",
+    "request-promise": "^4.2.6"
+  },
+  "watch": {
+    "nodemon": "*.js"
+  }
+}
