@@ -180,11 +180,11 @@ HoneywellTuxedoAccessory.prototype = {
         CurrentState  = (alarmStatus[statusString] === undefined) ? 3 : alarmStatus[statusString];
 
         if(value == 'Error'){
-          self.SecuritySystem
+          this.SecuritySystem
   						.getCharacteristic(Characteristic.StatusFault)
   						.setValue(1); // Set Statusfault characteristic to General Fault
         }else{
-          self.SecuritySystem
+          this.SecuritySystem
   						.getCharacteristic(Characteristic.StatusFault)
   						.setValue(0); // Set
         }
@@ -210,11 +210,11 @@ HoneywellTuxedoAccessory.prototype = {
           TargetState  = (alarmStatus[statusString] === undefined) ? 1 : alarmStatus[statusString];
 
           if(value == 'Error'){
-            self.SecuritySystem
+            this.SecuritySystem
     						.getCharacteristic(Characteristic.StatusFault)
     						.setValue(1); // Set Statusfault characteristic to General Fault
           }else{
-            self.SecuritySystem
+            this.SecuritySystem
     						.getCharacteristic(Characteristic.StatusFault)
     						.setValue(0); // Set
           }
