@@ -1,6 +1,6 @@
 {
   "name": "homebridge-honeywell-tuxedo-touch",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Homebridge plugin for the Honeywell Tuxedo Touch wifi security system",
   "main": "index.js",
   "scripts": {

@@ -120,7 +120,7 @@ HoneywellTuxedoAccessory.prototype = {
   	var self = this;
 
   	// Set up continuous polling if configured
-    console.log("Polling is set to : " + self.polling);
+    if(self.debug) self.log("[init] Polling is set to : " + self.polling);
   	if (self.polling) {
   		self.log("Starting polling with an interval of %s ms", self.pollInterval);
 

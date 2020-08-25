@@ -40,7 +40,7 @@ The configuration options are the following:
 ```
 
 - The **name** parameter is optional and determines the name of the security system you will see in HomeKit.
-- The **accessory** parameter tells Homebridge which plugin to load for this accessory.
+- The **accessory** parameter tells Homebridge which plugin to load for this accessory. Leave this exactly as described in the example config.
 - The **host** parameter accepts the ip address or the hostname of the Tuxedo touch unit.
   Whilst the IP address can be the local LAN ip of the unit, the tuxedo touch unit is sometimes unresponsive when accessed through the lan ip, it seems a lot more reliable when accessed through the WAN interface.
   If you have a static ip which exposes the unit, you can use that, if not, setup a dynamic dns, expose your tuxedo unit through that and use it with this plugin.
@@ -64,4 +64,4 @@ The configuration options are the following:
 <a href="https://www.buymeacoffee.com/lockpicker" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
 
 ## Credits
-I used the [homebridge-http-securitysystem](https://www.npmjs.com/package/homebridge-http-securitysystem) for while, hacked together for my personal use which inspired me to create a specific plugin for the Tuxedo touch for the benefit of all.
+I used the [homebridge-http-securitysystem](https://www.npmjs.com/package/homebridge-http-securitysystem) for a while, hacked together for my personal use which inspired me to create a specific plugin for the Tuxedo touch for the benefit of all.
