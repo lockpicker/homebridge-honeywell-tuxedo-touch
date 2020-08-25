@@ -28,7 +28,8 @@ var alarmStatus = {
   'Not Ready Alarm'  : 4,
   'Armed Stay Alarm' : 4,
   'Armed Night Alarm': 4,
-  'Armed Away Alarm' : 4
+  'Armed Away Alarm' : 4,
+  'Error' : 3 // Tuxedo api can be tempramental at times, when the API call fails, it's better to assume a disarmed state than not to.
 };
 
 module.exports = (homebridge) => {
@@ -177,6 +178,17 @@ HoneywellTuxedoAccessory.prototype = {
         var statusString = JSON.parse(value).Status.toString().trim();
         if(this.debug) this.log("[returnCurrentState] Retrieved status string: " + statusString + "alarmStatus[statusString] is: " + alarmStatus[statusString]);
         CurrentState  = (alarmStatus[statusString] === undefined) ? 3 : alarmStatus[statusString];
+
+        if(value == 'Error'){
+          self.SecuritySystem
+  						.getCharacteristic(Characteristic.StatusFault)
+  						.setValue(1); // Set Statusfault characteristic to General Fault
+        }else{
+          self.SecuritySystem
+  						.getCharacteristic(Characteristic.StatusFault)
+  						.setValue(0); // Set
+        }
+
         if(this.debug) this.log.debug("[returnCurrentState] Received value" + value)
         if(this.debug) this.log.debug('[returnCurrentState] Found current state: ' + CurrentState);
         callback(null, CurrentState);
@@ -196,6 +208,17 @@ HoneywellTuxedoAccessory.prototype = {
           var statusString = JSON.parse(value).Status.toString().trim();
           if(this.debug) this.log.debug("[returnCurrentState] Retrieved status string: " + statusString + " alarmStatus[statusString] is: " + alarmStatus[statusString]);
           TargetState  = (alarmStatus[statusString] === undefined) ? 1 : alarmStatus[statusString];
+
+          if(value == 'Error'){
+            self.SecuritySystem
+    						.getCharacteristic(Characteristic.StatusFault)
+    						.setValue(1); // Set Statusfault characteristic to General Fault
+          }else{
+            self.SecuritySystem
+    						.getCharacteristic(Characteristic.StatusFault)
+    						.setValue(0); // Set
+          }
+
           if(this.debug) this.log.debug("[returnTargetState] Received value" + value)
           if(this.debug) this.log.debug('[returnTargetState] Found target state: ' + TargetState);
           callback(null, TargetState);
@@ -254,7 +277,12 @@ function callAPI_POST(url, data, paramlength, headers, callback){
 
     }.bind(this))
     .catch(function (error) {
-        this.log('[callAPI_POST] error:', error);
+        if(this.debug){
+          this.log('[callAPI_POST] Error:', error);
+        }else{
+          this.log('[callAPI_POST] Error:' + error.message);
+          callback('{"Status":"Error"}'); //Return an error state, this is mapped to a disarmed state in the alarmStatus dict
+        }
     }.bind(this));
 }
 
