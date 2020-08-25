@@ -17,7 +17,6 @@ let CurrentState = 3;
 let TargetState = 3;
 var api_key_enc;
 var api_iv_enc;
-var lastArmMode = 3;
 
 var alarmStatus = {
   'Armed Stay'       : 0,
@@ -175,7 +174,9 @@ HoneywellTuxedoAccessory.prototype = {
     getAlarmMode.apply(this, [returnCurrentState.bind(this)]);
 
     function returnCurrentState(value){
-        CurrentState  = alarmStatus[JSON.parse(value).Status.toString().trim()];
+        var statusString = JSON.parse(value).Status.toString().trim();
+        if(this.debug) this.log("[returnCurrentState] Retrieved status string: " + statusString + "alarmStatus[statusString] is: " + alarmStatus[statusString]);
+        CurrentState  = (alarmStatus[statusString] === undefined) ? 3 : alarmStatus[statusString];
         if(this.debug) this.log.debug("[returnCurrentState] Received value" + value)
         if(this.debug) this.log.debug('[returnCurrentState] Found current state: ' + CurrentState);
         callback(null, CurrentState);
@@ -193,7 +194,8 @@ HoneywellTuxedoAccessory.prototype = {
 
       function returnTargetState(value){
           var statusString = JSON.parse(value).Status.toString().trim();
-          TargetState  = (alarmStatus[statusString] === undefined) ? this.lastArmMode : alarmStatus[statusString];
+          if(this.debug) this.log.debug("[returnCurrentState] Retrieved status string: " + statusString + " alarmStatus[statusString] is: " + alarmStatus[statusString]);
+          TargetState  = (alarmStatus[statusString] === undefined) ? 1 : alarmStatus[statusString];
           if(this.debug) this.log.debug("[returnTargetState] Received value" + value)
           if(this.debug) this.log.debug('[returnTargetState] Found target state: ' + TargetState);
           callback(null, TargetState);
@@ -207,8 +209,6 @@ HoneywellTuxedoAccessory.prototype = {
     if(this.debug) this.log.debug('Triggered SET SecuritySystemTargetState:' + value);
 
     TargetState = value;
-    this.lastArmMode = value;
-
     if(value == 0)  armAlarm.apply(this, ['STAY', callback]);
     if(value == 1)  armAlarm.apply(this, ['AWAY', callback]);
     if(value == 2)  armAlarm.apply(this, ['NIGHT', callback]);
