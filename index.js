@@ -6,9 +6,6 @@ var pollingtoevent = require("polling-to-event");
 var { CookieJar } = require("tough-cookie");
 const util = require("util");
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-process.env.NODE_NO_WARNINGS = "1";
-
 let Service, Characteristic;
 
 var protocol = "https";
@@ -32,7 +29,7 @@ var alarmStatus = {
   "Armed Night Alarm": 4,
   "Armed Away Alarm": 4,
   "Not available": 3,
-  "Error": 3 // Tuxedo api can be tempramental at times, when the API call fails, it's better to assume a disarmed state than not to.
+  Error: 3, // Tuxedo api can be tempramental at times, when the API call fails, it's better to assume a disarmed state than not to.
 };
 
 module.exports = (homebridge) => {
@@ -65,7 +62,6 @@ function HoneywellTuxedoAccessory(log, config) {
 
   // Get API Keys from the tuxedo unit
   // Create an API request with the cookie jar turned on
-  //got = got.defaults({cookieJar: true})
 
   async function getAPIKeys() {
     // Create an API request with the cookie jar turned on
@@ -75,7 +71,6 @@ function HoneywellTuxedoAccessory(log, config) {
       tuxApiUrl += "/tuxedoapi.html";
 
       const gotCookieJar = new CookieJar();
-      //const setCookie = promisify(cookieJar.setCookie.bind(cookieJar));
 
       const options = {
         method: "GET",
@@ -83,20 +78,17 @@ function HoneywellTuxedoAccessory(log, config) {
           "User-Agent": "homebridge",
         },
         cookieJar: gotCookieJar,
+        https: {
+          rejectUnauthorized: false,
+        },
       };
 
-      if (this.debug) this.log.debug("About to call, URL: " + tuxApiUrl);
+      if (this.debug) this.log("About to call, URL: " + tuxApiUrl);
       if (this.debug)
-        this.log.debug("Options: " + util.inspect(options, false, null, true));
+        this.log("Options: " + util.inspect(options, false, null, true));
 
-      try {
-        var response = await got(tuxApiUrl, options);
-      } catch (error) {
-        this.log(
-          "Error retrieving keys from the tuxedo unit. Turn on debug for verbose logging."
-        );
-        if (this.debug) this.log.debug(error);
-      }
+      var response = await got(tuxApiUrl, options);
+
       var root = HTMLParser.parse(response.body);
       var readit = root.querySelector("#readit");
 
@@ -123,7 +115,12 @@ function HoneywellTuxedoAccessory(log, config) {
         }
       }
     } catch (error) {
-      this.log("[getAPIKeys] Error:", error);
+      this.log("[getAPIKeys] Error retrieving keys from the tuxedo unit.");
+      if (error.code == "EPROTO") {
+        this.log(
+          "[getAPIKeys] This likely an issue with strict openSSL configuration, see: https://github.com/lockpicker/homebridge-honeywell-tuxedo-touch/issues/1"
+        );
+      } else if (this.debug) this.log(error);
     }
   }
 
@@ -142,7 +139,7 @@ function HoneywellTuxedoAccessory(log, config) {
     .on("get", this.handleSecuritySystemTargetStateGet.bind(this))
     .on("set", this.handleSecuritySystemTargetStateSet.bind(this));
 
-  if (this.debug) this.log.debug("Service creation complete");
+  if (this.debug) this.log("Service creation complete");
 }
 
 HoneywellTuxedoAccessory.prototype = {
@@ -198,7 +195,7 @@ HoneywellTuxedoAccessory.prototype = {
     }
   },
   getServices: function () {
-    if (this.debug) this.log.debug("Get Services called");
+    if (this.debug) this.log("Get Services called");
     if (!this.SecuritySystem) return [];
 
     const infoService = new Service.AccessoryInformation();
@@ -213,14 +210,14 @@ HoneywellTuxedoAccessory.prototype = {
    * Handle requests to get the current value of the "Security System Current State" characteristic
    */
   handleSecuritySystemCurrentStateGet: function (callback) {
-    if (this.debug) this.log.debug("Triggered GET SecuritySystemCurrentState");
+    if (this.debug) this.log("Triggered GET SecuritySystemCurrentState");
 
     getAlarmMode.apply(this, [returnCurrentState.bind(this)]);
 
     function returnCurrentState(value) {
       var statusString = JSON.parse(value).Status.toString().trim();
       if (this.debug)
-        this.log.debug(
+        this.log(
           "[returnCurrentState] Retrieved status string: " +
             statusString +
             ", alarmStatus is: " +
@@ -240,7 +237,12 @@ HoneywellTuxedoAccessory.prototype = {
       }
 
       if (this.debug)
-        this.log.debug("[returnCurrentState] Received value: " + value + ", corresponding current state: " + CurrentState);
+        this.log(
+          "[returnCurrentState] Received value: " +
+            value +
+            ", corresponding current state: " +
+            CurrentState
+        );
 
       callback(null, CurrentState);
     }
@@ -250,14 +252,14 @@ HoneywellTuxedoAccessory.prototype = {
    * Handle requests to get the current value of the "Security System Target State" characteristic
    */
   handleSecuritySystemTargetStateGet: function (callback) {
-    if (this.debug) this.log.debug("Triggered GET SecuritySystemTargetState");
+    if (this.debug) this.log("Triggered GET SecuritySystemTargetState");
 
     getAlarmMode.apply(this, [returnTargetState.bind(this)]);
 
     function returnTargetState(value) {
       var statusString = JSON.parse(value).Status.toString().trim();
       if (this.debug)
-        this.log.debug(
+        this.log(
           "[returnTargetState] Retrieved status string: " +
             statusString +
             ", alarmStatus is: " +
@@ -277,8 +279,13 @@ HoneywellTuxedoAccessory.prototype = {
       }
 
       if (this.debug)
-        this.log.debug("[returnTargetState] Received value: " + value + ", corresponding target state: " + TargetState);
- 
+        this.log(
+          "[returnTargetState] Received value: " +
+            value +
+            ", corresponding target state: " +
+            TargetState
+        );
+
       callback(null, TargetState);
     }
   },
@@ -288,7 +295,7 @@ HoneywellTuxedoAccessory.prototype = {
    */
   handleSecuritySystemTargetStateSet: function (value, callback) {
     if (this.debug)
-      this.log.debug("Triggered SET SecuritySystemTargetState:" + value);
+      this.log("Triggered SET SecuritySystemTargetState:" + value);
 
     TargetState = value;
     if (value == 0) armAlarm.apply(this, ["STAY", callback]);
@@ -314,7 +321,7 @@ async function callAPI_POST(url, data, paramlength, headers, callback) {
     cookieJar: gotCookieJar,
   };
   if (this.debug)
-    this.log.debug(
+    this.log(
       "[callAPI_POST]: Calling alarm API with url: " +
         options.url +
         " headers - authtoken: " +
@@ -340,11 +347,11 @@ async function callAPI_POST(url, data, paramlength, headers, callback) {
     }
     // At this point, we have the result, so any callbacks can be executed
     if (this.debug)
-      this.log.debug("[callAPI_POST] Response Final: " + respFinal);
+      this.log("[callAPI_POST] Response Final: " + respFinal);
     callback(decryptData.apply(this, [respFinal]));
   } catch (error) {
     if (this.debug) {
-      this.log.debug("[callAPI_POST] Error:", error);
+      this.log("[callAPI_POST] Error:", error);
     } else {
       this.log("[callAPI_POST] Error:" + error.message);
       callback('{"Status":"Error"}'); //Return an error state, this is mapped to a disarmed state in the alarmStatus dict
@@ -358,7 +365,7 @@ function getAlarmMode(callback) {
   url += apibasepath + "/GetSecurityStatus";
   var header = "MACID:Browser,Path:" + hPath + "/GetSecurityStatus";
   if (this.debug)
-    this.log.debug(
+    this.log(
       "[getAlarmMode] About to call with, url: " +
         url +
         " header: " +
@@ -392,7 +399,7 @@ function armAlarm(mode, callback) {
 
   var header = "MACID:Browser,Path:" + hPath + "/AdvancedSecurity/ArmWithCode";
   if (this.debug)
-    this.log.debug(
+    this.log(
       "[armAlarm] About to call API with, url:" +
         url +
         " dataCnt: " +
@@ -427,7 +434,7 @@ function disarmAlarm(callback) {
   var header =
     "MACID:Browser,Path:" + hPath + "/AdvancedSecurity/DisarmWithCode";
   if (this.debug)
-    this.log.debug(
+    this.log(
       "[disarmAlarm] About to call API with, url:" +
         url +
         " dataCnt: " +
@@ -464,7 +471,7 @@ function decryptData(data) {
     }
   );
   if (this.debug)
-    this.log.debug(
+    this.log(
       "[decryptData] Returning: " + decrypted.toString(CryptoJS.enc.Latin1)
     );
   return decrypted.toString(CryptoJS.enc.Latin1);
