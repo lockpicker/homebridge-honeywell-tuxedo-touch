@@ -319,6 +319,9 @@ async function callAPI_POST(url, data, paramlength, headers, callback) {
     },
     body: "param=" + data + "&len=" + paramlength + "&tstamp=" + Math.random(),
     cookieJar: gotCookieJar,
+    https: {
+      rejectUnauthorized: false
+    }
   };
   if (this.debug)
     this.log(
