@@ -25,10 +25,11 @@
   },
   "dependencies": {
     "crypto-js": "^4.0.0",
+    "got": "^11.5.2",
     "node-html-parser": "^1.2.20",
     "polling-to-event": "^2.1.0",
-    "request": "^2.88.2",
-    "request-promise": "^4.2.6"
+    "tough-cookie": "^4.0.0",
+    "util": "^0.12.3"
   },
   "readmeFilename": "README.md",
   "bugs": {
