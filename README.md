@@ -45,7 +45,7 @@ The configuration options are the following:
   Whilst the IP address can be the local LAN ip of the unit, the tuxedo touch unit is sometimes unresponsive when accessed through the lan ip, it seems a lot more reliable when accessed through the WAN interface.
   If you have a static ip which exposes the unit, you can use that, if not, setup a dynamic dns, expose your tuxedo unit through that and use it with this plugin.
   Though note that **if your local LAN IP works reliably, that should be your first preference**.
-- The **port** parameter is optional and accepts the port number of the host on which the Tuxedo touch unit is available.
+- The **port** parameter is optional and accepts the port number of the host on which the Tuxedo touch unit is available. The tuxedo API only responds over the https port(443), so if you're using port forwarding, remember to use the port that forwards to 443 on the tuxedo unit.
 - The **alarmCode** parameter accepts your security alarm code for arming and disarming the security system.
 - The **polling** is a boolean that specifies if the current state should be pulled on regular intervals or not.
   This is optional and defaults to false however using this is recommended as it will keep your Homekit status synced with the unit if the state changes outside of a Homekit operation.
