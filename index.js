@@ -66,7 +66,7 @@ function HoneywellTuxedoAccessory(log, config) {
   async function getAPIKeys() {
     // Create an API request with the cookie jar turned on
     try {
-      var tuxApiUrl = protocol + this.host;
+      var tuxApiUrl = protocol + "://" + this.host;
       if (this.port) tuxApiUrl += ":" + this.port;
       tuxApiUrl += "/tuxedoapi.html";
 
@@ -363,7 +363,7 @@ async function callAPI_POST(url, data, paramlength, headers, callback) {
 }
 
 function getAlarmMode(callback) {
-  var url = protocol + this.host;
+  var url = protocol + "://" + this.host;
   if (this.port != "") url += ":" + this.port;
   url += apibasepath + "/GetSecurityStatus";
   var header = "MACID:Browser,Path:" + hPath + "/GetSecurityStatus";
