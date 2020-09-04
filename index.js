@@ -102,7 +102,7 @@ function HoneywellTuxedoAccessory(log, config) {
           .toString()
           .substr(64, 96);
 
-        this.log("[getAPIKeys] Successfully retrieved keys");
+        if (this.debug) this.log("[getAPIKeys] Successfully retrieved keys");
         this.init();
       } else {
         if (
@@ -110,8 +110,10 @@ function HoneywellTuxedoAccessory(log, config) {
           "Max Number Of Connections In Use.Please Try Again."
         ) {
           this.log(
-            "[getAPIKeys] Max tuxedo connections exceeded. Please try again in a while."
+            "[getAPIKeys] Max tuxedo connections exceeded. Will retry in 3 mins."
           );
+          const setTimeoutPromise = util.promisify(setTimeout);
+          setTimeout(()=>{getAPIKeys.call(this)}, 180000);
         }
       }
     } catch (error) {
@@ -123,8 +125,10 @@ function HoneywellTuxedoAccessory(log, config) {
       } else if (this.debug) this.log(error);
     }
   }
-
-  getAPIKeys.call(this);
+  (async () => {
+    await getAPIKeys.call(this);
+  })();
+  
   // create a new Security System service
   this.SecuritySystem = new Service.SecuritySystem(this.name);
 
@@ -320,8 +324,8 @@ async function callAPI_POST(url, data, paramlength, headers, callback) {
     body: "param=" + data + "&len=" + paramlength + "&tstamp=" + Math.random(),
     cookieJar: gotCookieJar,
     https: {
-      rejectUnauthorized: false
-    }
+      rejectUnauthorized: false,
+    },
   };
   if (this.debug)
     this.log(
@@ -349,8 +353,7 @@ async function callAPI_POST(url, data, paramlength, headers, callback) {
       }
     }
     // At this point, we have the result, so any callbacks can be executed
-    if (this.debug)
-      this.log("[callAPI_POST] Response Final: " + respFinal);
+    if (this.debug) this.log("[callAPI_POST] Response Final: " + respFinal);
     callback(decryptData.apply(this, [respFinal]));
   } catch (error) {
     if (this.debug) {
