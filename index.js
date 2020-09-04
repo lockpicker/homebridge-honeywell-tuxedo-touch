@@ -66,7 +66,7 @@ function HoneywellTuxedoAccessory(log, config) {
   async function getAPIKeys() {
     // Create an API request with the cookie jar turned on
     try {
-      var tuxApiUrl = "https://" + this.host;
+      var tuxApiUrl = protocol + this.host;
       if (this.port) tuxApiUrl += ":" + this.port;
       tuxApiUrl += "/tuxedoapi.html";
 
@@ -363,7 +363,7 @@ async function callAPI_POST(url, data, paramlength, headers, callback) {
 }
 
 function getAlarmMode(callback) {
-  var url = "https://" + this.host;
+  var url = protocol + this.host;
   if (this.port != "") url += ":" + this.port;
   url += apibasepath + "/GetSecurityStatus";
   var header = "MACID:Browser,Path:" + hPath + "/GetSecurityStatus";
@@ -397,7 +397,7 @@ function armAlarm(mode, callback) {
       "&operation=set",
   ]);
   var url = protocol + "://" + this.host;
-  if (this.port != "") url += ":" + location.port;
+  if (this.port != "") url += ":" + this.port;
   url += apibasepath + "/AdvancedSecurity/ArmWithCode"; //?param=" + encryptData(dataCnt);
 
   var header = "MACID:Browser,Path:" + hPath + "/AdvancedSecurity/ArmWithCode";
@@ -431,7 +431,7 @@ function disarmAlarm(callback) {
     "pID=" + pID + "&ucode=" + parseInt(this.uCode) + "&operation=set",
   ]);
   var url = protocol + "://" + this.host;
-  if (this.port != "") url += ":" + location.port;
+  if (this.port != "") url += ":" + this.port;
   url += apibasepath + "/AdvancedSecurity/DisarmWithCode"; //?param=" + encryptData(dataCnt);
 
   var header =
