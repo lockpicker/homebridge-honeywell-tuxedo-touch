@@ -29,7 +29,7 @@ var alarmStatus = {
   "Armed Night Alarm": 4,
   "Armed Away Alarm": 4,
   "Not available": 3,
-  Error: 3, // Tuxedo api can be tempramental at times, when the API call fails, it's better to assume a disarmed state than not to.
+  "Error": 3, // Tuxedo api can be tempramental at times, when the API call fails, it's better to assume a disarmed state than not to.
 };
 
 module.exports = (homebridge) => {
@@ -113,22 +113,32 @@ function HoneywellTuxedoAccessory(log, config) {
             "[getAPIKeys] Max tuxedo connections exceeded. Will retry in 3 mins."
           );
           const setTimeoutPromise = util.promisify(setTimeout);
-          setTimeout(()=>{getAPIKeys.call(this)}, 180000);
+          setTimeout(() => {
+            getAPIKeys.call(this);
+          }, 180000);
         }
       }
     } catch (error) {
-      this.log("[getAPIKeys] Error retrieving keys from the tuxedo unit.");
       if (error.code == "EPROTO") {
         this.log(
           "[getAPIKeys] This likely an issue with strict openSSL configuration, see: https://github.com/lockpicker/homebridge-honeywell-tuxedo-touch/issues/1"
         );
-      } else if (this.debug) this.log(error);
+      } else {
+        this.log("[getAPIKeys] Error retrieving keys from the tuxedo unit. Will retry in 3 mins.");
+        
+        if (this.debug) this.log(error);
+        
+        const setTimeoutPromise = util.promisify(setTimeout);
+          setTimeout(() => {
+            getAPIKeys.call(this);
+          }, 180000);
+      }
     }
   }
   (async () => {
     await getAPIKeys.call(this);
   })();
-  
+
   // create a new Security System service
   this.SecuritySystem = new Service.SecuritySystem(this.name);
 
@@ -262,15 +272,26 @@ HoneywellTuxedoAccessory.prototype = {
 
     function returnTargetState(value) {
       var statusString = JSON.parse(value).Status.toString().trim();
-      if (this.debug)
+
+      if (statusString.indexOf("Secs Remaining") != -1) {
+        TargetState = 1;
+      } else {
+        TargetState =
+          alarmStatus[statusString] === undefined
+            ? 3
+            : alarmStatus[statusString];
+      }
+
+      if (
+        (alarmStatus[statusString] === undefined) &&
+        (statusString.indexOf("Secs Remaining") == -1)
+      ) {
         this.log(
-          "[returnTargetState] Retrieved status string: " +
+          "Unknown alarm state: " +
             statusString +
-            ", alarmStatus is: " +
-            alarmStatus[statusString]
+            " please report this through a github issue to the developer"
         );
-      TargetState =
-        alarmStatus[statusString] === undefined ? 1 : alarmStatus[statusString];
+      }
 
       if (value == "Error") {
         this.SecuritySystem.getCharacteristic(
