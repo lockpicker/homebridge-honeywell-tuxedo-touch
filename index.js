@@ -19,11 +19,15 @@ var api_iv_enc;
 
 var alarmStatus = {
   "Armed Stay": 0,
+  "Armed Stay Fault": 0,
   "Armed Away": 1,
+  "Armed Away Fault": 1,
   "Armed Night": 2,
   "Armed Night Fault": 2,
+  "Ready Fault": 3,
   "Ready To Arm": 3,
   "Not Ready Fault": 3,
+  "Entry Delay Active": 4,
   "Not Ready Alarm": 4,
   "Armed Stay Alarm": 4,
   "Armed Night Alarm": 4,
@@ -112,7 +116,7 @@ function HoneywellTuxedoAccessory(log, config) {
           this.log(
             "[getAPIKeys] Max tuxedo connections exceeded. Will retry in 3 mins."
           );
-          const setTimeoutPromise = util.promisify(setTimeout);
+          
           setTimeout(() => {
             getAPIKeys.call(this);
           }, 180000);
@@ -127,11 +131,10 @@ function HoneywellTuxedoAccessory(log, config) {
         this.log("[getAPIKeys] Error retrieving keys from the tuxedo unit. Will retry in 3 mins.");
         
         if (this.debug) this.log(error);
-        
-        const setTimeoutPromise = util.promisify(setTimeout);
-          setTimeout(() => {
-            getAPIKeys.call(this);
-          }, 180000);
+
+        setTimeout(() => {
+          getAPIKeys.call(this);
+        }, 180000);
       }
     }
   }
@@ -197,9 +200,12 @@ HoneywellTuxedoAccessory.prototype = {
             config.property,
             state
           );
-          self.SecuritySystem.getCharacteristic(config.characteristic).setValue(
-            state
-          );
+          if (config.property === "target state" && state == 4) {
+            // Do nothing: When alarm state is triggered, leave target state as is.
+            // Homekit doesn't accept a triggered value for target state.
+          } else {
+            self.SecuritySystem.getCharacteristic(config.characteristic).setValue(state);
+          }
         });
 
         emitter.on("error", function (err) {
