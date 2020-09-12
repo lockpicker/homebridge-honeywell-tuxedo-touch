@@ -14,6 +14,7 @@ var hPath = "API_REV01";
 
 let CurrentState = 3;
 let TargetState = 3;
+let lastTargetState = 3;
 var api_key_enc;
 var api_iv_enc;
 
@@ -129,13 +130,13 @@ function HoneywellTuxedoAccessory(log, config) {
         );
       } else {
         this.log("[getAPIKeys] Error retrieving keys from the tuxedo unit. Will retry in 3 mins.");
-        
-        if (this.debug) this.log(error);
 
-        setTimeout(() => {
-          getAPIKeys.call(this);
-        }, 180000);
+        if (this.debug) this.log(error);
       }
+      // On error, retry in some time
+      setTimeout(() => {
+        getAPIKeys.call(this);
+      }, 180000);
     }
   }
   (async () => {
@@ -200,9 +201,15 @@ HoneywellTuxedoAccessory.prototype = {
             config.property,
             state
           );
-          if (config.property === "target state" && state == 4) {
-            // Do nothing: When alarm state is triggered, leave target state as is.
-            // Homekit doesn't accept a triggered value for target state.
+          if (config.property === "target state") {
+            if(state == 4){
+              // Homekit doesn't accept a triggered value for target state, hence set the targetstate to last known target state
+              if(self.debug) self.log("Received target state 4, setting target state to lastTargetState: " + self.lastTargetState);
+                self.SecuritySystem.getCharacteristic(config.characteristic).setValue(self.lastTargetState);
+              }else{
+                self.lastTargetState = state;  
+                self.SecuritySystem.getCharacteristic(config.characteristic).setValue(state);
+              }
           } else {
             self.SecuritySystem.getCharacteristic(config.characteristic).setValue(state);
           }
@@ -286,6 +293,8 @@ HoneywellTuxedoAccessory.prototype = {
           alarmStatus[statusString] === undefined
             ? 3
             : alarmStatus[statusString];
+        // Homekit doesn't accept a targetState of 4 (triggered), when triggered, return lastTargetState
+	      if(TargetState == 4) TargetState = this.lastTargetState;
       }
 
       if (
@@ -329,6 +338,9 @@ HoneywellTuxedoAccessory.prototype = {
       this.log("Triggered SET SecuritySystemTargetState:" + value);
 
     TargetState = value;
+    //Capture the last target state if it isn't disarmed
+    if(value != 3)
+    	this.lastTargetState = value;
     if (value == 0) armAlarm.apply(this, ["STAY", callback]);
     if (value == 1) armAlarm.apply(this, ["AWAY", callback]);
     if (value == 2) armAlarm.apply(this, ["NIGHT", callback]);
