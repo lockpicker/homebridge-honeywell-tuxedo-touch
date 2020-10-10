@@ -52,6 +52,9 @@ The configuration options are the following:
 - **pollInterval** is a number which defines the poll interval in milliseconds. Defaults to 30000.
 - The **debug** parameter is boolean and turns on debug messages.
 
+## Troubleshooting tips
+- Make sure to disable "Authentication for web server local access" from the accounts screen under settings on the tuxedo unit.
+
 ## FAQ
 - Node may throw the following warning
   ```
