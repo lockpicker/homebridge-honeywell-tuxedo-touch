@@ -19,22 +19,24 @@ var api_key_enc;
 var api_iv_enc;
 
 var alarmStatus = {
-  "Armed Stay": 0,
-  "Armed Stay Fault": 0,
-  "Armed Away": 1,
-  "Armed Away Fault": 1,
-  "Armed Night": 2,
-  "Armed Night Fault": 2,
-  "Ready Fault": 3,
-  "Ready To Arm": 3,
-  "Not Ready Fault": 3,
+  "Armed Stay"        : 0,
+  "Armed Stay Fault"  : 0,
+  "Armed Away"        : 1,
+  "Armed Away Fault"  : 1,
+  "Armed Night"       : 2,
+  "Armed Instant"     : 2, 
+  "Armed Night Fault" : 2,
+  "Ready Fault"       : 3,
+  "Ready To Arm"      : 3,
+  "Not Ready"         : 3,
+  "Not Ready Fault"   : 3,
   "Entry Delay Active": 4,
-  "Not Ready Alarm": 4,
-  "Armed Stay Alarm": 4,
-  "Armed Night Alarm": 4,
-  "Armed Away Alarm": 4,
-  "Not available": 3,
-  "Error": 3, // Tuxedo api can be tempramental at times, when the API call fails, it's better to assume a disarmed state than not to.
+  "Not Ready Alarm"   : 4,
+  "Armed Stay Alarm"  : 4,
+  "Armed Night Alarm" : 4,
+  "Armed Away Alarm"  : 4,
+  "Not available"     : 5, // At certain times, tuxedo API returns a Not available value with a successful API response, not sure why this is, set accessory to general fault when this happens
+  "Error"             : 5, // Tuxedo api can be tempramental at times, when the API call fails, we set the accessory to general fault.
 };
 
 module.exports = (homebridge) => {
@@ -196,27 +198,39 @@ HoneywellTuxedoAccessory.prototype = {
         );
 
         emitter.on("longpoll", function (state) {
-          self.log(
-            "Polling noticed %s change to %s, notifying devices",
-            config.property,
-            state
-          );
-          if (config.property === "target state") {
-            if(state == 4){
-              // Homekit doesn't accept a triggered value for target state, hence set the targetstate to last known target state
-              if(self.debug) self.log("Received target state 4, setting target state to lastTargetState: " + self.lastTargetState);
-                self.SecuritySystem.getCharacteristic(config.characteristic).setValue(self.lastTargetState);
-              }else{
-                self.lastTargetState = state;  
-                self.SecuritySystem.getCharacteristic(config.characteristic).setValue(state);
-              }
+          if(state != 5){
+              self.log(
+              "Polling noticed %s change to %s, notifying devices",
+              config.property,
+              state
+              );
+            if (config.property === "target state") {
+              if(state == 4){
+                // Homekit doesn't accept a triggered value for target state, hence set the targetstate to last known target state
+                if(self.debug) self.log("Received target state 4, setting target state to lastTargetState: " + self.lastTargetState);
+                  self.SecuritySystem.getCharacteristic(config.characteristic).setValue(self.lastTargetState);
+                }else{
+                  self.lastTargetState = state;  
+                  self.SecuritySystem.getCharacteristic(config.characteristic).setValue(state);
+                }
+            } else {
+              self.SecuritySystem.getCharacteristic(config.characteristic).setValue(state);
+            }
+            // Set Statusfault characteristic to no fault
+            self.SecuritySystem.getCharacteristic(Characteristic.StatusFault).setValue(0)
           } else {
-            self.SecuritySystem.getCharacteristic(config.characteristic).setValue(state);
+            // When state is 5, an error has been encountered, most common causes are unit not reachable due to internet issues or returning state as not available
+            // Set Statusfault characteristic to General Fault
+            self.SecuritySystem.getCharacteristic(Characteristic.StatusFault).setValue(1)
+            self.log("Security system state unavailable, setting state to fault")
           }
-        });
+        }
+          );
 
         emitter.on("error", function (err) {
           self.log("Polling of %s failed, error was %s", config.property, err);
+          // Set Statusfault characteristic to General Fault
+          this.SecuritySystem.getCharacteristic(Characteristic.StatusFault).setValue(1)
         });
       });
     }
@@ -252,16 +266,15 @@ HoneywellTuxedoAccessory.prototype = {
         );
       CurrentState =
         alarmStatus[statusString] === undefined ? 3 : alarmStatus[statusString];
-
-      if (value == "Error") {
-        this.SecuritySystem.getCharacteristic(
-          Characteristic.StatusFault
-        ).setValue(1); // Set Statusfault characteristic to General Fault
-      } else {
-        this.SecuritySystem.getCharacteristic(
-          Characteristic.StatusFault
-        ).setValue(0); // Set
-      }
+      
+        // If we find a state that isn't defined in alarm status and it isn't a arming / delay state, report in the log
+        if ((alarmStatus[statusString] === undefined) && (statusString.indexOf("Secs Remaining") == -1)) {
+          this.log(
+            "[handleSecuritySystemCurrentStateGet] Unknown alarm state: " +
+              statusString +
+              " please report this through a github issue to the developer"
+          );
+        }
 
       if (this.debug)
         this.log(
@@ -302,20 +315,10 @@ HoneywellTuxedoAccessory.prototype = {
         (statusString.indexOf("Secs Remaining") == -1)
       ) {
         this.log(
-          "Unknown alarm state: " +
+          "[handleSecuritySystemTargetStateGet] Unknown alarm state: " +
             statusString +
             " please report this through a github issue to the developer"
         );
-      }
-
-      if (value == "Error") {
-        this.SecuritySystem.getCharacteristic(
-          Characteristic.StatusFault
-        ).setValue(1); // Set Statusfault characteristic to General Fault
-      } else {
-        this.SecuritySystem.getCharacteristic(
-          Characteristic.StatusFault
-        ).setValue(0); // Set
       }
 
       if (this.debug)
