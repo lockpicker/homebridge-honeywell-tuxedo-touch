@@ -15,6 +15,7 @@ var hPath = "API_REV01";
 let CurrentState = 3;
 let TargetState = 3;
 let lastTargetState = 3;
+let lastValidCurrentState = 3;
 var api_key_enc;
 var api_iv_enc;
 
@@ -121,7 +122,9 @@ function HoneywellTuxedoAccessory(log, config) {
           );
           
           setTimeout(() => {
-            getAPIKeys.call(this);
+            (async () => {
+              await getAPIKeys.call(this);
+            })();
           }, 180000);
         }
       }
@@ -283,7 +286,12 @@ HoneywellTuxedoAccessory.prototype = {
             ", corresponding current state: " +
             CurrentState
         );
-
+      if (CurrentState != 5){
+        this.lastValidCurrentState = CurrentState;
+      }else{
+        CurrentState = this.lastValidCurrentState;
+        if(this.debug) this.log("[handleSecuritySystemCurrentStateGet] Current state was Not available / error, returning the last known good state" + this.lastValidCurrentState);
+      }
       callback(null, CurrentState);
     }
   },
@@ -300,18 +308,19 @@ HoneywellTuxedoAccessory.prototype = {
       var statusString = JSON.parse(value).Status.toString().trim();
 
       if (statusString.indexOf("Secs Remaining") != -1) {
-        TargetState = 1;
+        TargetState = this.lastTargetState;
       } else {
         TargetState =
           alarmStatus[statusString] === undefined
             ? 3
             : alarmStatus[statusString];
         // Homekit doesn't accept a targetState of 4 (triggered), when triggered, return lastTargetState
-	      if(TargetState == 4) TargetState = this.lastTargetState;
+        if((TargetState == 4) || (TargetState == 5)) TargetState = this.lastTargetState;
+        if(this.debug) this.log("[handleSecuritySystemTargetStateGet] Target state was: " + TargetState + " returning lastTargetState: " + this.lastTargetState); 
       }
 
       if (
-        (alarmStatus[statusString] === undefined) &&
+        (alarmStatus[statusString] === undefined) && 
         (statusString.indexOf("Secs Remaining") == -1)
       ) {
         this.log(
@@ -395,14 +404,53 @@ async function callAPI_POST(url, data, paramlength, headers, callback) {
       }
     }
     // At this point, we have the result, so any callbacks can be executed
-    if (this.debug) this.log("[callAPI_POST] Response Final: " + respFinal);
-    callback(decryptData.apply(this, [respFinal]));
+    if (this.debug) this.log("[callAPI_POST] Trying to decrypt response: " + respFinal);
+    var decryptedData = decryptData.apply(this, [respFinal]);
+    //if (this.debug) this.log("[callAPI_POST] Response final decrypted: " + decryptedData);
+
+
+    var statusString = JSON.parse(decryptedData).Status.toString().trim();
+    /* Tuxedo has an annoying bug, sometimes the unit disconnects from the router and upon reconnecting, the GET API call continuously returns a "Not available" status.
+     * This seems to fix itself when the homepage home.html is loaded on any browser
+     * hence as a hack, if we receive a Not available state, we will try to fetch home.html programmatically to resolve the issue
+     */
+    if(statusString == "Not available") {
+        this.log("[callAPI_POST] Received response 'Not available', applying tuxedo bug workaround, fetching home.html in 10 secs");
+        setTimeout(() => {
+            (async () => {
+              try{
+                var tuxhomeUrl = protocol + "://" + this.host;
+                if (this.port) tuxhomeUrl += ":" + this.port;
+                tuxhomeUrl += "/home.html";
+
+                const homepageoptions = {
+                  url: tuxhomeUrl,
+                  cookieJar: gotCookieJar,
+                  retry: 0,
+                };
+                
+                var response = await got(homepageoptions);
+                this.log("[callAPI_POST] Not available hack, homepage call response code " + response.statusCode);
+                if(response.statusCode == "200"){
+                  this.log("[callAPI_POST] Not available status hack returned status 200, status should fix itself in the next GET call");
+                }
+              }catch(error){
+                this.log("[callAPI_POST] Not available status hack failed, Error: " + error);
+              }
+              
+            })();
+            
+        }, 10000);
+    }
+    // return data 
+    callback(decryptedData);
+    
   } catch (error) {
     if (this.debug) {
       this.log("[callAPI_POST] Error:", error);
     } else {
       this.log("[callAPI_POST] Error:" + error.message);
-      callback('{"Status":"Error"}'); //Return an error state, this is mapped to a disarmed state in the alarmStatus dict
+      callback('{"Status":"Error"}'); //Return an error state, this is mapped to an invalid state 5 in the alarmStatus dict
     }
   }
 }
