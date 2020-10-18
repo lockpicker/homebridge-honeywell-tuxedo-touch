@@ -23,6 +23,19 @@ Given enough time and motivation, this can be converted to a platform accessory 
 ## Configuration
 The configuration options are the following:
 
+Minimum options:
+```
+"accessories": [
+  {
+    "accessory": "Honeywell Tuxedo Touch",
+    "host": "myalarm.ddns.net",
+    "alarmCode": "1234"
+  }
+]
+
+```
+
+All options:
 ```
 "accessories": [
   {
@@ -33,6 +46,7 @@ The configuration options are the following:
     "alarmCode": "1234",
     "polling": true,
     "pollInterval": 10000,
+    "fetchKeysBeforeEverySetCall" : false,
     "debug": false
   }
 ]
@@ -50,6 +64,7 @@ The configuration options are the following:
 - The **polling** is a boolean that specifies if the current state should be pulled on regular intervals or not.
   This is optional and defaults to false however using this is recommended as it will keep your Homekit status synced with the unit if the state changes outside of a Homekit operation.
 - **pollInterval** is a number which defines the poll interval in milliseconds. Defaults to 30000.
+- **fetchKeysBeforeEverySetCall** is currently an experimental optional parameter for units that potentially have a bug due to which the get api may return incorrect state. This may be corrected by re-fetching the API keys at the time the SET calls are being made. This should only be used if you're getting a state issue e.g. Alarm is armed in night mode but homekit is displaying off etc.
 - The **debug** parameter is boolean and turns on debug messages.
 
 ## Troubleshooting tips

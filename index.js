@@ -54,6 +54,7 @@ function HoneywellTuxedoAccessory(log, config) {
   this.log = log;
   this.config = config;
   this.debug = config.debug || false;
+  this.fetchKeysBeforeEverySetCall = config.fetchKeysBeforeEverySetCall || false;
   this.polling = config.polling || false;
   this.pollInterval = config.pollInterval || 30000;
 
@@ -68,82 +69,6 @@ function HoneywellTuxedoAccessory(log, config) {
   }
   this.uCode = config.alarmCode;
 
-  // Get API Keys from the tuxedo unit
-  // Create an API request with the cookie jar turned on
-
-  async function getAPIKeys() {
-    // Create an API request with the cookie jar turned on
-    try {
-      var tuxApiUrl = protocol + "://" + this.host;
-      if (this.port) tuxApiUrl += ":" + this.port;
-      tuxApiUrl += "/tuxedoapi.html";
-
-      const gotCookieJar = new CookieJar();
-
-      const options = {
-        method: "GET",
-        headers: {
-          "User-Agent": "homebridge",
-        },
-        cookieJar: gotCookieJar,
-        https: {
-          rejectUnauthorized: false,
-        },
-      };
-
-      if (this.debug) this.log("About to call, URL: " + tuxApiUrl);
-      if (this.debug)
-        this.log("Options: " + util.inspect(options, false, null, true));
-
-      var response = await got(tuxApiUrl, options);
-
-      var root = HTMLParser.parse(response.body);
-      var readit = root.querySelector("#readit");
-
-      if (readit) {
-        this.api_key_enc = readit
-          .getAttribute("value")
-          .toString()
-          .substr(0, 64);
-        this.api_iv_enc = readit
-          .getAttribute("value")
-          .toString()
-          .substr(64, 96);
-
-        if (this.debug) this.log("[getAPIKeys] Successfully retrieved keys");
-        this.init();
-      } else {
-        if (
-          root.querySelector("h1").structuredText ==
-          "Max Number Of Connections In Use.Please Try Again."
-        ) {
-          this.log(
-            "[getAPIKeys] Max tuxedo connections exceeded. Will retry in 3 mins."
-          );
-          
-          setTimeout(() => {
-            (async () => {
-              await getAPIKeys.call(this);
-            })();
-          }, 180000);
-        }
-      }
-    } catch (error) {
-      if (error.code == "EPROTO") {
-        this.log(
-          "[getAPIKeys] This likely an issue with strict openSSL configuration, see: https://github.com/lockpicker/homebridge-honeywell-tuxedo-touch/issues/1"
-        );
-      } else {
-        this.log("[getAPIKeys] Error retrieving keys from the tuxedo unit. Will retry in 3 mins.");
-
-        if (this.debug) this.log(error);
-      }
-      // On error, retry in some time
-      setTimeout(() => {
-        getAPIKeys.call(this);
-      }, 180000);
-    }
-  }
   (async () => {
     await getAPIKeys.call(this);
   })();
@@ -254,7 +179,7 @@ HoneywellTuxedoAccessory.prototype = {
    * Handle requests to get the current value of the "Security System Current State" characteristic
    */
   handleSecuritySystemCurrentStateGet: function (callback) {
-    if (this.debug) this.log("Triggered GET SecuritySystemCurrentState");
+    if (this.debug) this.log("[handleSecuritySystemCurrentStateGet] Triggered GET SecuritySystemCurrentState");
 
     getAlarmMode.apply(this, [returnCurrentState.bind(this)]);
 
@@ -347,7 +272,14 @@ HoneywellTuxedoAccessory.prototype = {
    */
   handleSecuritySystemTargetStateSet: function (value, callback) {
     if (this.debug)
-      this.log("Triggered SET SecuritySystemTargetState:" + value);
+      this.log("[handleSecuritySystemTargetStateGet] Triggered SET SecuritySystemTargetState:" + value);
+
+    if (this.fetchKeysBeforeEverySetCall){
+      if(this.debug) this.log("[handleSecuritySystemCurrentStateGet] fetchKeysBeforeEverySetCall config is true, fetching API keys again");
+      (async () => {
+        await getAPIKeys.bind(this);
+      })();
+    }
 
     TargetState = value;
     //Capture the last target state if it isn't disarmed
@@ -585,4 +517,82 @@ function encryptData(data) {
     }
   );
   return encodeURIComponent(encString);
+}
+
+// Get API Keys from the tuxedo unit
+// Create an API request with the cookie jar turned on
+
+async function getAPIKeys() {
+  // Create an API request with the cookie jar turned on
+  if (this.debug) this.log("[getAPIKeys] getAPIKeys called");
+  try {
+    var tuxApiUrl = protocol + "://" + this.host;
+    if (this.port) tuxApiUrl += ":" + this.port;
+    tuxApiUrl += "/tuxedoapi.html";
+
+    const gotCookieJar = new CookieJar();
+
+    const options = {
+      method: "GET",
+      headers: {
+        "User-Agent": "homebridge",
+      },
+      cookieJar: gotCookieJar,
+      https: {
+        rejectUnauthorized: false,
+      },
+    };
+
+    if (this.debug) this.log("About to call, URL: " + tuxApiUrl);
+    if (this.debug)
+      this.log("Options: " + util.inspect(options, false, null, true));
+
+    var response = await got(tuxApiUrl, options);
+
+    var root = HTMLParser.parse(response.body);
+    var readit = root.querySelector("#readit");
+
+    if (readit) {
+      this.api_key_enc = readit
+        .getAttribute("value")
+        .toString()
+        .substr(0, 64);
+      this.api_iv_enc = readit
+        .getAttribute("value")
+        .toString()
+        .substr(64, 96);
+
+      if (this.debug) this.log("[getAPIKeys] Successfully retrieved keys");
+      this.init();
+    } else {
+      if (
+        root.querySelector("h1").structuredText ==
+        "Max Number Of Connections In Use.Please Try Again."
+      ) {
+        this.log(
+          "[getAPIKeys] Max tuxedo connections exceeded. Will retry in 3 mins."
+        );
+        
+        setTimeout(() => {
+          (async () => {
+            await getAPIKeys.call(this);
+          })();
+        }, 180000);
+      }
+    }
+  } catch (error) {
+    if (error.code == "EPROTO") {
+      this.log(
+        "[getAPIKeys] This likely an issue with strict openSSL configuration, see: https://github.com/lockpicker/homebridge-honeywell-tuxedo-touch/issues/1"
+      );
+    } else {
+      this.log("[getAPIKeys] Error retrieving keys from the tuxedo unit. Will retry in 3 mins.");
+
+      if (this.debug) this.log(error);
+    }
+    // On error, retry in some time
+    setTimeout(() => {
+      getAPIKeys.call(this);
+    }, 180000);
+  }
 }

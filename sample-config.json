@@ -16,6 +16,7 @@
         "alarmCode": "1234",
         "polling": true,
         "pollInterval": 10000,
+        "fetchKeysBeforeEverySetCall" : false,
         "debug": false
       }
     ]
