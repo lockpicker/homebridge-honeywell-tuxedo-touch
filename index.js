@@ -215,7 +215,7 @@ HoneywellTuxedoAccessory.prototype = {
         this.lastValidCurrentState = CurrentState;
       }else{
         CurrentState = this.lastValidCurrentState;
-        if(this.debug) this.log("[handleSecuritySystemCurrentStateGet] Current state was Not available / error, returning the last known good state" + this.lastValidCurrentState);
+        if(this.debug) this.log("[handleSecuritySystemCurrentStateGet] Current state was Not available / error, returning the last known good state: " + this.lastValidCurrentState);
       }
       callback(null, CurrentState);
     }
@@ -343,36 +343,14 @@ async function callAPI_POST(url, data, paramlength, headers, callback) {
 
     var statusString = JSON.parse(decryptedData).Status.toString().trim();
     /* Tuxedo has an annoying bug, sometimes the unit disconnects from the router and upon reconnecting, the GET API call continuously returns a "Not available" status.
-     * This seems to fix itself when the homepage home.html is loaded on any browser
-     * hence as a hack, if we receive a Not available state, we will try to fetch home.html programmatically to resolve the issue
+     * This seems to fix itself when the homepage tuxedoapi.html is loaded on any browser
+     * hence as a hack, if we receive a Not available state, we will try to fetch api keys again which loads the tuxedoapi.html programmatically to resolve the issue
      */
     if(statusString == "Not available") {
-        this.log("[callAPI_POST] Received response 'Not available', applying tuxedo bug workaround, fetching home.html in 10 secs");
-        setTimeout(() => {
-            (async () => {
-              try{
-                var tuxhomeUrl = protocol + "://" + this.host;
-                if (this.port) tuxhomeUrl += ":" + this.port;
-                tuxhomeUrl += "/home.html";
-
-                const homepageoptions = {
-                  url: tuxhomeUrl,
-                  cookieJar: gotCookieJar,
-                  retry: 0,
-                };
-                
-                var response = await got(homepageoptions);
-                this.log("[callAPI_POST] Not available hack, homepage call response code " + response.statusCode);
-                if(response.statusCode == "200"){
-                  this.log("[callAPI_POST] Not available status hack returned status 200, status should fix itself in the next GET call");
-                }
-              }catch(error){
-                this.log("[callAPI_POST] Not available status hack failed, Error: " + error);
-              }
-              
-            })();
-            
-        }, 10000);
+        this.log("[callAPI_POST] Received response 'Not available', applying tuxedo bug workaround, fetching api keys again, if successful this should resolve the problem in the next call");
+        (async () => {
+          await getAPIKeys.bind(this);
+        })();
     }
     // return data 
     callback(decryptedData);
