@@ -16,9 +16,33 @@ This plugin currently only supports the security system feature of the Honeywell
   <tr><td>Home </td><td>Stay</td></tr>
   <tr><td>Night </td><td>Night</td></tr>
   <tr><td>Away </td><td>Away</td></tr>
+  <tr><td>Off </td><td>Disarm</td></tr>
 </table>
 
-Given enough time and motivation, this can be converted to a platform accessory and expanded to fetch other devices controlled by the Tuxedo unit.
+and the following tuxedo state mappings are applied:
+<table style='align:center'>
+  <tr><td><b>Tuxedo State</b></td><td><b>Homekit security state</b></td></tr>
+  <tr><td>Armed Stay</td><td>Stay</td></tr>
+  <tr><td>Armed Stay Fault</td><td>Stay</td></tr>
+  <tr><td>Armed Away</td><td>Away</td></tr>
+  <tr><td>Armed Away Fault</td><td>Away</td></tr>
+  <tr><td>Armed Night</td><td>Night</td></tr>
+  <tr><td>Armed Night Fault</td><td>Night</td></tr>
+  <tr><td>Armed Instant</td><td>Night</td></tr>
+  <tr><td>Armed Instant Fault</td><td>Night</td></tr>
+  <tr><td>Ready Fault</td><td>Off</td></tr>
+  <tr><td>Ready To Arm</td><td>Off</td></tr>
+  <tr><td>Not Ready</td><td>Off</td></tr>
+  <tr><td>Not Ready Fault</td><td>Off</td></tr>
+  <tr><td>Entry Delay Active</td><td>Triggered</td></tr>
+  <tr><td>Not Ready Alarm</td><td>Triggered</td></tr>
+  <tr><td>Armed Stay Alarm</td><td>Triggered</td></tr>
+  <tr><td>Armed Night Alarm</td><td>Triggered</td></tr>
+  <tr><td>Armed Away Alarm</td><td>Triggered</td></tr>
+</table>
+
+There is no available comprehensive list of states documented for the Tuxedo unit so this is compiled based on everything we've seen so far. If the plugin detects a mode not in the list, it will result in disarming the system as assuming any other state will result in a false alarm condition. This will also be logged in the logs. If this happens, please raise a bug through github and the state will be added to the mapping for appropriate handling.
+
 
 ## Configuration
 The configuration options are the following:
@@ -69,6 +93,7 @@ All options:
 
 ## Troubleshooting tips
 - Make sure to disable "Authentication for web server local access" from the accounts screen under settings on the tuxedo unit.
+- If the alarm disarms itself without any operation from the user(s), check to see if your tuxedo unit is displaying a state which isn'tn in the state mapping provided above and report that through an issue on github. This will also be logged in the homebridge logs.
 
 ## FAQ
 - Node may throw the following warning
@@ -76,6 +101,8 @@ All options:
   Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
   ```
   This is because the Tuxedo units come with really old certs which aren't trusted anymore, without any way to upgrade these certs, the workaround is to not check the cert.
+- Why is this not a platform accessory and/or why does it not support the other devices controlled by tuxedo? <br>
+  The tuxedo API has many bugs including a significant issue of not returning all devices controlled by the unit. The device api seems to only return the first device connected to the unit and not all. Given enough time and motivation, this can be achieved through the workaround of scraping the web interface.
 
 ## Dev fuel
 
