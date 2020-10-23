@@ -163,6 +163,16 @@ HoneywellTuxedoAccessory.prototype = {
         });
       });
     }
+    // Fetch API keys every 5 mins 
+    // This is to work around a bug in many Tuxedo units which periodically starts returning the wrong status
+    // until some page is fecthed in a browser, fetching keys again loads tuxedoapi.html which has the same affect
+    function tuxedoApiStateHack() {
+      if(this.debug) this.log("[tuxedoApiStateHack] Re-fetching API keys");
+      (async () => {
+        getAPIKeys.bind(this);
+      })();
+    }
+    setInterval(tuxedoApiStateHack,300000);
   },
   getServices: function () {
     if (this.debug) this.log("Get Services called");
@@ -565,7 +575,7 @@ async function getAPIKeys() {
         "[getAPIKeys] This likely an issue with strict openSSL configuration, see: https://github.com/lockpicker/homebridge-honeywell-tuxedo-touch/issues/1"
       );
     } else {
-      this.log("[getAPIKeys] Error retrieving keys from the tuxedo unit. Will retry in 3 mins.");
+      this.log("[getAPIKeys] Error retrieving keys from the tuxedo unit. Please ensure 'Authentication for web server local access' is disabled on the tuxedo unit. Will retry in 3 mins.");
 
       if (this.debug) this.log(error);
     }
