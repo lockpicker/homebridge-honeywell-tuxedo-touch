@@ -360,7 +360,7 @@ async function callAPI_POST(url, data, paramlength, headers, callback) {
     if(statusString == "Not available") {
         this.log("[callAPI_POST] Received response 'Not available', applying tuxedo bug workaround, fetching api keys again, if successful this should resolve the problem in the next call");
         (async () => {
-          await getAPIKeys.bind(this);
+          await getAPIKeys.call(this);
         })();
     }
     // return data 
